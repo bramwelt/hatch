@@ -1,5 +1,27 @@
 /*
- * Parser
+ * Simple Calculator Parser
+ *
+ *
+ * Expr     = Integer
+ *          | MultDivExpr
+ *          | AddSubExpr
+ *
+ * AddSubExpr  = + Expr Expr
+ *             | - Expr Expr
+ *
+ * MultDivExpr = * Expr Expr
+ *             | / Expr Expr
+ *
+ * Integer  = [0-9]+
+ *
+ * Example:
+ *
+ *   (2 * 8) + (15 / 5) - 4 ~> 15
+ *
+ *   [Note: Parenthesis added for clarification, not part of grammar]
+ *
+ *   Would be written:
+ *   - + * 2 8 / 15 5 4
  */
 #include <stdio.h>
 #include <stdlib.h>
