@@ -1,4 +1,4 @@
 Hatch
 =====
 
-Hatch is a scheme interpreter written from scratch.
+Hatch is a toy compiler for simple math expresions.
