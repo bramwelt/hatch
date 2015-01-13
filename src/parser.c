@@ -1,7 +1,10 @@
 /*
  * Simple Calculator Parser
+ * by Trevor Bramwell
+ * (c) 2014 - GPLv3
  *
- *
+ *      Formal Grammar
+ * -------------------------
  * Expr     = Integer
  *          | MultDivExpr
  *          | AddSubExpr
@@ -13,6 +16,7 @@
  *             | / Expr Expr
  *
  * Integer  = [0-9]+
+ * -------------------------
  *
  * Example:
  *
@@ -23,9 +27,8 @@
  *   Would be written:
  *   - + * 2 8 / 15 5 4
  *
- * TODO: Split out Lexer & Parser
- * TODO: Each Parse construct should return a Tree
- * TODO: A Tree a recursive struct with nodes being Tokens.
+ * Quiting the parser can be done with ^D or ^C.
+ *
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,64 +48,68 @@ typedef struct Token {
     int lexeme;
 } Token;
 
-
 // Globals - :(
 FILE* fp;
 Token token;
 
-/*
-typedef struct Parser {
-    FILE* file;
-    int line;
-    int column;
-} Parser;
-*/
-
-
-/*
-match(Token) - match the given token and advance if present
-expect()     - aka 'peek' - look ahead at the token so we can decide which
-               path to take
-*/
-
-void Expr();
-void AddSubExpr();
-void MultDivExpr();
+int Expr();
+int AddSubExpr();
+int MultDivExpr();
 void match(Symbol s);
 void emit(Symbol s);
 
-void
+int
 Expr() {
     if (token.symbol == INT) {
-        match(INT); emit(INT);
+        int a = token.lexeme;
+        match(INT);
+        return a;
     } else if (token.symbol == MULTIPLY || token.symbol == DIVIDE) {
-        MultDivExpr();
+        return MultDivExpr();
     } else if (token.symbol == ADD || token.symbol == SUBTRACT) {
-        AddSubExpr();
+        return AddSubExpr();
     } else {
         printf("Error in Expr.\n"); exit(EXIT_FAILURE);
     }
 }
 
-void
+int
 AddSubExpr() {
+    int a, b, c;
     if (token.symbol == ADD ) {
-        match(ADD); emit(ADD); Expr(); Expr();
+        match(ADD);
+        a = Expr();
+        b = Expr();
+        c = a + b;
+        return c;
     } else if (token.symbol == SUBTRACT) {
-        match(SUBTRACT); emit(SUBTRACT); Expr(); Expr();
+        match(SUBTRACT);
+        a = Expr(); 
+        b = Expr();
+        c = a - b;
+        return c;
     } else {
         printf("Error in AddSub\n"); exit(EXIT_FAILURE);
     }
 }
 
-void
+int
 MultDivExpr() {
+    int a, b, c;
     if (token.symbol == MULTIPLY) {
-        match(MULTIPLY); emit(MULTIPLY); Expr(); Expr();
+        match(MULTIPLY);
+        a = Expr();
+        b = Expr();
+        c = a * b;
+        return c;
     } else if (token.symbol == DIVIDE) {
-        match(DIVIDE); emit(DIVIDE); Expr(); Expr();
+        match(DIVIDE);
+        a = Expr();
+        b = Expr();
+        c = a / b;
+        return c;
     } else {
-        printf("Erorr in MultDiv\n"); exit(EXIT_FAILURE);
+        printf("Error in MultDiv\n"); exit(EXIT_FAILURE);
     }
 }
 
@@ -170,6 +177,8 @@ emit(Symbol s) {
 void
 match(Symbol s) {
     if (s == token.symbol) {
+        // Enable to see tokens as they are matched.
+        // emit(s);
         get_token();
     } else {
         printf("ERR - Unknown symbol: %d\n", s);
@@ -181,6 +190,7 @@ match(Symbol s) {
 int
 main(int argc, char argv[])
 {
+    int result;
 
     fp = fdopen(0, "r");
 
@@ -192,9 +202,11 @@ main(int argc, char argv[])
 
     get_token();
     while (token.symbol != END) {
-        emit(token.symbol);
-        get_token();
+        result = Expr();
         if (token.symbol == EOL) {
+            // Uncomment this if token debugging is enabled.
+            // printf("\n");
+            printf("%d", result);
             printf("\n> ");
             get_token();
         }
