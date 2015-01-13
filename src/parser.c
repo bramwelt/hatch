@@ -22,78 +22,165 @@
  *
  *   Would be written:
  *   - + * 2 8 / 15 5 4
+ *
+ * TODO: Split out Lexer & Parser
+ * TODO: Each Parse construct should return a Tree
+ * TODO: A Tree a recursive struct with nodes being Tokens.
  */
 #include <stdio.h>
 #include <stdlib.h>
 
-enum SYMBOL {
-    PLUS,
-    MINUS,
+typedef enum Symbol {
+    ADD = 0,
+    SUBTRACT,
     MULTIPLY,
     DIVIDE,
-    INT
-};
+    INT,
+    EOL,
+    END
+} Symbol;
 
-typedef struct token_struct {
-    SYMBOL symbol = -1;
+typedef struct Token {
+    Symbol symbol;
     int lexeme;
-} token;
-
-token
-get_token(char* line)
-{
-    token t;
-    int c = line[0];
-
-    switch (c) {
-        case '+': t = {PLUS}; break;
-        case '-': t = {MINUS}; break;
-        case '*': t = {MULTIPLY}; break;
-        case '/': t = {DIVIDE}; break;
-        default:
-            if (isdigit(c)) {
-                t = {INT, i};
-            }
-            break;
-    }
+} Token;
 
 
-    return t;
-}
+// Globals - :(
+FILE* fp;
+Token token;
 
-char*
-tokenize(char* line)
-{
-    // for whole line
-    // divide by tokens alpha & (+-*/)
-    // send each piece to get_token
-    //
-    if ( line[0] == '+' ) return PLUS;
-    if ( strncmp(line, "quit", 4) == 0 || strncmp(line, "exit", 4) == 0) {
-        //printf("\n");
-        exit(EXIT_SUCCESS);
+/*
+typedef struct Parser {
+    FILE* file;
+    int line;
+    int column;
+} Parser;
+*/
+
+
+/*
+match(Token) - match the given token and advance if present
+expect()     - aka 'peek' - look ahead at the token so we can decide which
+               path to take
+*/
+
+void Expr();
+void AddSubExpr();
+void MultDivExpr();
+void match(Symbol s);
+void emit(Symbol s);
+
+void
+Expr() {
+    if (token.symbol == INT) {
+        match(INT); emit(INT);
+    } else if (token.symbol == MULTIPLY || token.symbol == DIVIDE) {
+        MultDivExpr();
+    } else if (token.symbol == ADD || token.symbol == SUBTRACT) {
+        AddSubExpr();
     } else {
-        printf("Unrecognized %s", line);
+        printf("Error in Expr.\n"); exit(EXIT_FAILURE);
     }
-
-    return line;
 }
 
 void
-eval(char* ast)
+AddSubExpr() {
+    if (token.symbol == ADD ) {
+        match(ADD); emit(ADD); Expr(); Expr();
+    } else if (token.symbol == SUBTRACT) {
+        match(SUBTRACT); emit(SUBTRACT); Expr(); Expr();
+    } else {
+        printf("Error in AddSub\n"); exit(EXIT_FAILURE);
+    }
+}
+
+void
+MultDivExpr() {
+    if (token.symbol == MULTIPLY) {
+        match(MULTIPLY); emit(MULTIPLY); Expr(); Expr();
+    } else if (token.symbol == DIVIDE) {
+        match(DIVIDE); emit(DIVIDE); Expr(); Expr();
+    } else {
+        printf("Erorr in MultDiv\n"); exit(EXIT_FAILURE);
+    }
+}
+
+Symbol
+get_token()
 {
-    printf("%s", ast);
+    int c = getc(fp);
+
+    while(isalpha(c) || isblank(c)) {
+        c = getc(fp);
+    }
+
+    switch (c) {
+        case '+':
+            token.symbol = ADD;
+            return ADD;
+
+        case '-':
+            token.symbol = SUBTRACT;
+            return SUBTRACT;
+
+        case '*':
+            token.symbol = MULTIPLY;
+            return MULTIPLY;
+
+        case '/':
+            token.symbol = DIVIDE;
+            return DIVIDE;
+
+        case EOF:
+            token.symbol = END;
+            return END;
+
+        case '\n':
+            token.symbol = EOL;
+            return EOL;
+
+        default:
+            if (isdigit(c)) {
+                token.symbol = INT;
+                token.lexeme = (c - '0');
+                while (isdigit(c = getc(fp))) {
+                    token.lexeme = token.lexeme * 10 + (c - '0');
+                }
+                ungetc(c, fp);
+                return INT;
+            } else {
+                c = getc(fp);
+            }
+    }
+}
+
+void
+emit(Symbol s) {
+    switch(s) {
+        case ADD: printf("<ADD, '+'>"); break;
+        case SUBTRACT: printf("<SUBTRACT, '-'>"); break;
+        case MULTIPLY: printf("<MULTIPLY, '*'>"); break;
+        case DIVIDE: printf("<DIVIDE, '/'>"); break;
+        case INT: printf("<INT, '%d'>", token.lexeme); break;
+        default: break;
+    }
+}
+
+void
+match(Symbol s) {
+    if (s == token.symbol) {
+        get_token();
+    } else {
+        printf("ERR - Unknown symbol: %d\n", s);
+        exit(EXIT_FAILURE);
+    }
 }
 
 
 int
 main(int argc, char argv[])
 {
-    FILE *fp;
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t read;
-    char *ast = NULL;
 
     fp = fdopen(0, "r");
 
@@ -102,12 +189,18 @@ main(int argc, char argv[])
     }
 
     printf("> ");
-    while ((read = getline(&line, &len, fp)) != -1) {
-        ast = tokenize(line);
-        eval(ast);
-        printf("> ");
-    }
 
-    free(line);
+    get_token();
+    while (token.symbol != END) {
+        emit(token.symbol);
+        get_token();
+        if (token.symbol == EOL) {
+            printf("\n> ");
+            get_token();
+        }
+    }
+    printf("\n");
+
+    close(fp);
     exit(EXIT_SUCCESS);
 }
