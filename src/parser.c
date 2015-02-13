@@ -5,29 +5,34 @@
  *
  *      Formal Grammar
  * -------------------------
- * Expr     = Integer
- *          | MultDivExpr
- *          | AddSubExpr
+ * Expr        = MultDivExpr
+ *             | AddSubExpr
  *
- * AddSubExpr  = + Expr Expr
- *             | - Expr Expr
+ * AddSubExpr  = + IExpr IExpr
+ *             | - IExpr IExpr
  *
- * MultDivExpr = * Expr Expr
- *             | / Expr Expr
+ * MultDivExpr = * IExpr IExpr
+ *             | / IExpr IExpr
  *
- * Integer  = [0-9]+
+ * IExpr       = Expr
+ *             | Integer
+ *
+ * Integer     = [0-9]+
  * -------------------------
  *
- * Example:
+ * Here is an example in infix notation:
  *
- *   (2 * 8) + (15 / 5) - 4 ~> 15
+ *   (2 * 8) + (15 / 5) - 4
  *
- *   [Note: Parenthesis added for clarification, not part of grammar]
+ * [Note: Parenthesis added for clarification, not part of grammar]
  *
- *   Would be written:
+ * As this grammer uses prefix notation, this example would be written:
+ *
  *   - + * 2 8 / 15 5 4
  *
- * Quiting the parser can be done with ^D or ^C.
+ * Which evaluates to 15.
+ *
+ * Quiting the parser can be done with Ctrl-D or Ctrl-C.
  *
  */
 #include <stdio.h>
@@ -60,11 +65,7 @@ void emit(Symbol s);
 
 int
 Expr() {
-    if (token.symbol == INT) {
-        int a = token.lexeme;
-        match(INT);
-        return a;
-    } else if (token.symbol == MULTIPLY || token.symbol == DIVIDE) {
+    if (token.symbol == MULTIPLY || token.symbol == DIVIDE) {
         return MultDivExpr();
     } else if (token.symbol == ADD || token.symbol == SUBTRACT) {
         return AddSubExpr();
@@ -74,18 +75,31 @@ Expr() {
 }
 
 int
+IExpr() {
+    if (token.symbol >= ADD && token.symbol <= DIVIDE) {
+        return Expr();
+    } else if (token.symbol == INT) {
+        int a = token.lexeme;
+        match(INT);
+        return a;
+    } else {
+        printf("Error in IExpr.\n"); exit(EXIT_FAILURE);
+    }
+}
+
+int
 AddSubExpr() {
     int a, b, c;
     if (token.symbol == ADD ) {
         match(ADD);
-        a = Expr();
-        b = Expr();
+        a = IExpr();
+        b = IExpr();
         c = a + b;
         return c;
     } else if (token.symbol == SUBTRACT) {
         match(SUBTRACT);
-        a = Expr(); 
-        b = Expr();
+        a = IExpr();
+        b = IExpr();
         c = a - b;
         return c;
     } else {
@@ -98,14 +112,14 @@ MultDivExpr() {
     int a, b, c;
     if (token.symbol == MULTIPLY) {
         match(MULTIPLY);
-        a = Expr();
-        b = Expr();
+        a = IExpr();
+        b = IExpr();
         c = a * b;
         return c;
     } else if (token.symbol == DIVIDE) {
         match(DIVIDE);
-        a = Expr();
-        b = Expr();
+        a = IExpr();
+        b = IExpr();
         c = a / b;
         return c;
     } else {
