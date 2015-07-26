@@ -37,6 +37,8 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <unistd.h>
 
 typedef enum Symbol {
     ADD = 0,
@@ -202,7 +204,7 @@ match(Symbol s) {
 
 
 int
-main(int argc, char argv[])
+main(int argc, char **argv)
 {
     int result;
 
@@ -227,6 +229,6 @@ main(int argc, char argv[])
     }
     printf("\n");
 
-    close(fp);
+    fclose(fp);
     exit(EXIT_SUCCESS);
 }
