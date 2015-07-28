@@ -43,16 +43,22 @@
 
 #include <lexer.h>
 
-int IExpr(Token token, ParseFile *parsefile);
-int Expr(Token token, ParseFile *parsefile);
-int AddSubExpr(Token token, ParseFile *parsefile);
-int MultDivExpr(Token token, ParseFile *parsefile);
+typedef struct ParseTree {
+    Token token;
+    int result;
+} ParseTree;
+
+int IExpr(Token *token, ParseFile *parsefile);
+int Expr(Token *token, ParseFile *parsefile);
+int AddSubExpr(Token *token, ParseFile *parsefile);
+int MultDivExpr(Token *token, ParseFile *parsefile);
+void match(Symbol symbol, Token *token, ParseFile *parsefile);
 
 int
-Expr(Token token, ParseFile *parsefile) {
-    if (token.symbol == MULTIPLY || token.symbol == DIVIDE) {
+Expr(Token* token, ParseFile *parsefile) {
+    if (token->symbol == MULTIPLY || token->symbol == DIVIDE) {
         return MultDivExpr(token, parsefile);
-    } else if (token.symbol == ADD || token.symbol == SUBTRACT) {
+    } else if (token->symbol == ADD || token->symbol == SUBTRACT) {
         return AddSubExpr(token, parsefile);
     } else {
         printf("Error in Expr.\n");
@@ -61,11 +67,11 @@ Expr(Token token, ParseFile *parsefile) {
 }
 
 int
-IExpr(Token token, ParseFile *parsefile) {
-    if (token.symbol >= ADD && token.symbol <= DIVIDE) {
+IExpr(Token* token, ParseFile *parsefile) {
+    if (token->symbol >= ADD && token->symbol <= DIVIDE) {
         return Expr(token, parsefile);
-    } else if (token.symbol == INT) {
-        int a = token.lexeme;
+    } else if (token->symbol == INT) {
+        int a = token->lexeme;
         match(INT, token, parsefile);
         return a;
     } else {
@@ -75,15 +81,15 @@ IExpr(Token token, ParseFile *parsefile) {
 }
 
 int
-AddSubExpr(Token token, ParseFile *parsefile) {
+AddSubExpr(Token* token, ParseFile *parsefile) {
     int a, b, c;
-    if (token.symbol == ADD ) {
+    if (token->symbol == ADD ) {
         match(ADD, token, parsefile);
         a = IExpr(token, parsefile);
         b = IExpr(token, parsefile);
         c = a + b;
         return c;
-    } else if (token.symbol == SUBTRACT) {
+    } else if (token->symbol == SUBTRACT) {
         match(SUBTRACT, token, parsefile);
         a = IExpr(token, parsefile);
         b = IExpr(token, parsefile);
@@ -96,15 +102,15 @@ AddSubExpr(Token token, ParseFile *parsefile) {
 }
 
 int
-MultDivExpr(Token token, ParseFile *parsefile) {
+MultDivExpr(Token* token, ParseFile *parsefile) {
     int a, b, c;
-    if (token.symbol == MULTIPLY) {
+    if (token->symbol == MULTIPLY) {
         match(MULTIPLY, token, parsefile);
         a = IExpr(token, parsefile);
         b = IExpr(token, parsefile);
         c = a * b;
         return c;
-    } else if (token.symbol == DIVIDE) {
+    } else if (token->symbol == DIVIDE) {
         match(DIVIDE, token, parsefile);
         a = IExpr(token, parsefile);
         b = IExpr(token, parsefile);
@@ -112,6 +118,18 @@ MultDivExpr(Token token, ParseFile *parsefile) {
         return c;
     } else {
         printf("Error in MultDiv\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+void
+match(Symbol symbol, Token* token, ParseFile* parsefile) {
+    if (symbol == token->symbol) {
+        // Enable to see tokens as they are matched.
+        //emit(token);
+        get_token(parsefile, token);
+    } else {
+        printf("%s:%d - Unknown symbol %d\n", parsefile->filename, parsefile->line, symbol);
         exit(EXIT_FAILURE);
     }
 }
@@ -128,22 +146,18 @@ main(int argc, char **argv)
 
     printf("Compiling %s\n", parsefile->filename);
 
+    ParseTree pt;
+    pt.result = 0;
 
-    Token t = get_token(parsefile);
-    while (t.symbol != END) {
-        emit(&t);
-        t = get_token(parsefile);
+    get_token(parsefile, &pt.token);
+
+    while (pt.token.symbol != END) {
+        //emit(&pt.token);
+        //printf("\n");
+        //get_token(parsefile, &pt.token);
+        pt.result = IExpr(&pt.token, parsefile);
+        printf("> %d\n", pt.result);
     }
-    //    int result = IExpr(token, parsefile);
-    //    if (token.symbol == EOL) {
-    //        // Uncomment this if token debugging is enabled.
-    //        // printf("\n");
-    //        printf("%d", result);
-    //        printf("\n> ");
-    //        token = get_token(parsefile);
-    //    }
-    //}
-    //printf("\n");
 
     printf("Done Compiling: %s\n", parsefile->filename);
 

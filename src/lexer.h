@@ -12,7 +12,6 @@ typedef enum Symbol {
     MULTIPLY,
     DIVIDE,
     INT,
-    EOL,
     END,
     UNKNOWN
 } Symbol;
@@ -29,8 +28,7 @@ typedef struct ParseFile {
     int column;
 } ParseFile;
 
-Token match(Symbol symbol, Token token, ParseFile* parsefile);
-Token get_token(ParseFile* file);
+void get_token(ParseFile* file, Token *token);
 
 ParseFile* newFile(char *filename);
 void removeFile(ParseFile* parsefile);

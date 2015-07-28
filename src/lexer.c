@@ -12,13 +12,15 @@
 
 #include <lexer.h>
 
-ParseFile* newFile(char* filename) {
+ParseFile*
+newFile(char* filename)
+{
 
     ParseFile* parsefile = malloc(sizeof(ParseFile));
     parsefile->filename = filename;
     parsefile->fp = fopen(filename, "r");
     parsefile->line = 1;
-    parsefile->column = 1;
+    parsefile->column = 0;
 
     if (parsefile->fp == NULL) {
         exit(EXIT_FAILURE);
@@ -27,21 +29,10 @@ ParseFile* newFile(char* filename) {
     return parsefile;
 }
 
-void removeFile(ParseFile* parsefile) {
+void
+removeFile(ParseFile* parsefile) {
     fclose(parsefile->fp);
     free(parsefile);
-}
-
-Token
-match(Symbol symbol, Token token, ParseFile* parsefile) {
-    if (symbol == token.symbol) {
-        // Enable to see tokens as they are matched.
-        // emit(token);
-        return get_token(parsefile);
-    } else {
-        printf("%s:%d - Unknown symbol %d\n", parsefile->filename, parsefile->line, symbol);
-        exit(EXIT_FAILURE);
-    }
 }
 
 void
@@ -56,68 +47,56 @@ emit(Token* token) {
     }
 }
 
-
-Token
-get_token(ParseFile* file)
+void
+get_token(ParseFile *file, Token *token)
 {
-    Token token;
     int c = getc(file->fp);
 
     while (isblank(c) || isalpha(c) || c == '\n') {
+        ++(file->column);
         if (c == '\n') {
             ++(file->line);
             file->column = 0;
-        } else {
-            ++(file->column);
         }
         c = getc(file->fp);
     }
 
     if (isdigit(c)) {
-        token.symbol = INT;
-        token.lexeme = (c - '0');
+        token->symbol = INT;
+        token->lexeme = (c - '0');
         while (isdigit(c = getc(file->fp))) {
-            token.lexeme = token.lexeme * 10 + (c - '0');
+            token->lexeme = token->lexeme * 10 + (c - '0');
         }
         ungetc(c, file->fp);
-        printf("%d:%d ", file->line, file->column);
-        emit(&token);
-        printf("\n");
         // Update the column to the end of the number
-        file->column = file->column + floor(log10(abs(token.lexeme))) + 1;
-        return token;
+        file->column = file->column + floor(log10(abs(token->lexeme))) + 1;
+    } else {
+        switch (c) {
+            case '+':
+                token->symbol = ADD;
+                break;
+
+            case '-':
+                token->symbol = SUBTRACT;
+                break;
+
+            case '*':
+                token->symbol = MULTIPLY;
+                break;
+
+            case '/':
+                token->symbol = DIVIDE;
+                break;
+
+            case EOF:
+                token->symbol = END;
+                break;
+
+            default:
+                token->symbol = UNKNOWN;
+                printf("%s %d:%d unrecognized symbol '%c'\n",file->filename, file->line, file->column, c);
+        }
+
+        ++(file->column);
     }
-
-    switch (c) {
-        case '+':
-            token.symbol = ADD;
-            break;
-
-        case '-':
-            token.symbol = SUBTRACT;
-            break;
-
-        case '*':
-            token.symbol = MULTIPLY;
-            break;
-
-        case '/':
-            token.symbol = DIVIDE;
-            break;
-
-        case EOF:
-            token.symbol = END;
-            return token;
-
-        default:
-            token.symbol = UNKNOWN;
-            printf("%s %d:%d unrecognized symbol '%c'\n", file->filename, file->line, file->column, c);
-            return token;
-    }
-
-    printf("%d:%d ", file->line, file->column);
-    emit(&token);
-    printf("\n");
-    ++(file->column);
-    return token;
 }
